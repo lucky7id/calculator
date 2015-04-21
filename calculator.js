@@ -9,34 +9,37 @@ function Calculator () {
     };
 
     this.regs = {
-        'divide': /(\d\s*\/\s*\d)/,
-        'multiply': /(\d\s*\*\s*\d)/,
-        'add': /(\d\s*\+\s*\d)/,
-        subtract: /(\d\s*\-\s*\d)/
+        'divide': /(\d+\s*\/\s*\d+)/,
+        'multiply': /(\d+\s*\*\s*\d+)/,
+        'add': /(\d+\s*\+\s*\d+)/,
+        'subtract': /(\d+\s*\-\s*\d+)/,
+        'expr': /(\d+\s*[\*|\+|\/|\-]\s*\d+)/,
+        'op': /(\+|\-|\*|\/)/
     };
 
     this.currentOp = undefined;
 }
 
 Calculator.prototype.add = function (a, b) {
-    return a + b;
+    return parseInt(a, 10) + parseInt(b, 10);
 };
 
 Calculator.prototype.subtract = function(a, b) {
-    return a - b;
+    return parseInt(a, 10) - parseInt(b, 10);
 };
 
 Calculator.prototype.multiply = function(a, b) {
-    return a * b;
+    return parseInt(a, 10) * parseInt(b, 10);
 };
 
 Calculator.prototype.divide = function(a, b) {
-    return a / b;
+    return parseInt(a, 10) / parseInt(b, 10);
 };
 
 //take a string such as 1 + 2, clean, and create an Obj
 Calculator.prototype.lexExp = function(input) {
-    var cleanExp = input.replace(/\w/g, '').split('');
+    var cleanExp = input.replace(/\s/g, '').split(this.regs.op);
+    //var op = this.ops[this.regs.op.exec(input)[0]];
 
     return {
         left: cleanExp[0],
@@ -45,16 +48,22 @@ Calculator.prototype.lexExp = function(input) {
     };
 };
 
-Calculator.prototype.parseStream = function() {
+Calculator.prototype.parseStream = function(input) {
     var self = this;
+    var copy = input;
 
-    this.stream.map(function(op){
-        return self[op](op.left, op.right);
-    });
+    //while there is still math to do
+    while (this.regs.expr.test(copy)) {
+        var op = this.regs.expr.exec(copy)[0];
+        var lexed = this.lexExp(op);
+        copy = copy.replace(op, this[this.ops[lexed.op]](lexed.left, lexed.right));
+    }
+
+    return copy;
 };
 
 Calculator.prototype.processInput = function(input) {
-    var currentOp = input;
+    this.currentOp = input;
 
     this.result(this.parseStream(this.solveComplex()));
 };
@@ -82,13 +91,20 @@ Calculator.prototype.solveMD = function(input, type) {
     var reg = this.regs[type];
     var eq = this[type];
 
-    while (reg.test(input)) {
-        var lexed = this.lexExp(reg.exec(input)[0]);
+    while (reg.test(str)) {
+        var lexed = this.lexExp(reg.exec(str)[0]);
+
         str = str.replace(reg, eq(lexed.left, lexed.right));
     }
+
+    return str;
 };
 
 Calculator.prototype.result = function(input) {
     console.log(input);
 };
 
+
+//test run
+var calc = new Calculator();
+calc.processInput('1 + 4 / 2');
